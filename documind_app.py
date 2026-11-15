@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 from pypdf import PdfReader
 from google import genai
 from google.genai import types
+from google.oauth2 import service_account
 
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_LEFT
@@ -29,9 +30,20 @@ load_dotenv()
 APP_DIR = Path(__file__).resolve().parent
 HTML_FILE = APP_DIR / "documind_axon_ui.html"
 MAX_FILE_SIZE = 20 * 1024 * 1024
-PROJECT_ID = os.getenv("GOOGLE_CLOUD_PROJECT", "").strip()
-LOCATION = os.getenv("GOOGLE_CLOUD_LOCATION", "global").strip()
-MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash").strip()
+PROJECT_ID = st.secrets.get(
+    "GOOGLE_CLOUD_PROJECT",
+    os.getenv("GOOGLE_CLOUD_PROJECT", "")
+).strip()
+
+LOCATION = st.secrets.get(
+    "GOOGLE_CLOUD_LOCATION",
+    os.getenv("GOOGLE_CLOUD_LOCATION", "global")
+).strip()
+
+MODEL = st.secrets.get(
+    "GEMINI_MODEL",
+    os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+).strip()
 
 st.set_page_config(page_title="DocuMind AI", page_icon="✳", layout="wide")
 
@@ -109,11 +121,32 @@ template = template.replace(
 )
 st.components.v1.html(template, height=430, scrolling=False)
 
+#@st.cache_resource
+# def get_vertex_client(project_id: str, location: str):
+#     if not project_id:
+#         raise ValueError("Set GOOGLE_CLOUD_PROJECT in your .env file.")
+#     return genai.Client(vertexai=True, project=project_id, location=location)
+
 @st.cache_resource
 def get_vertex_client(project_id: str, location: str):
+
     if not project_id:
-        raise ValueError("Set GOOGLE_CLOUD_PROJECT in your .env file.")
-    return genai.Client(vertexai=True, project=project_id, location=location)
+        raise ValueError("Google Cloud Project ID is missing.")
+
+    if "gcp_service_account" not in st.secrets:
+        raise ValueError("Google Cloud credentials are missing.")
+
+    credentials = service_account.Credentials.from_service_account_info(
+        dict(st.secrets["gcp_service_account"]),
+        scopes=["https://www.googleapis.com/auth/cloud-platform"]
+    )
+
+    return genai.Client(
+        vertexai=True,
+        project=project_id,
+        location=location,
+        credentials=credentials
+    )
 
 def ask_gemini(data: bytes, prompt: str) -> str:
     client = get_vertex_client(PROJECT_ID, LOCATION)
