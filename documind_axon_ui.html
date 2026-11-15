@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="DocuMind AI document intelligence workspace">
+<title>DocuMind AI</title>
+<style>
+:root{--bg:#07060b;--line:#292433;--text:#eeeaf6;--muted:#a29aad;--accent:#b79aff}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;width:100%;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif}
+body{background:radial-gradient(ellipse at 52% -12%,rgba(142,101,222,.2),transparent 42%),#07060b}
+.wrap{max-width:1500px;margin:0 auto;padding:24px 30px 18px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:16px;padding-bottom:20px;border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:12px}
+.logo{height:38px;width:38px;flex:0 0 38px;border-radius:12px;background:linear-gradient(145deg,#b99cff,#6446a5);display:grid;place-items:center;color:#100b19;font-weight:900;font-size:20px}
+.brand-name{font-size:16px;font-weight:750;letter-spacing:.13em}
+.brand-sub{font-size:10px;color:var(--muted);margin-top:4px;letter-spacing:.08em}
+.pill{border:1px solid #3c3450;border-radius:999px;padding:7px 11px;font-size:10px;color:#d5c9ee;background:#171321;white-space:nowrap}
+.eyebrow{color:var(--accent);font-size:10px;letter-spacing:.17em;text-transform:uppercase;margin:25px 0 11px}
+h1{font-size:clamp(27px,3.8vw,42px);line-height:1.1;letter-spacing:-.045em;font-weight:650;margin:0}
+h1 span{color:var(--accent)}
+.lead{color:var(--muted);font-size:12px;line-height:1.7;max-width:760px;margin:12px 0 0}
+.metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px;margin:23px 0 0}
+.metric{min-width:0;background:linear-gradient(145deg,#171421,#100e16);border:1px solid var(--line);border-radius:11px;padding:13px 15px}
+.metric-label{font-size:9px;color:var(--muted);letter-spacing:.13em;text-transform:uppercase}
+.metric-value{font-size:16px;font-weight:650;margin-top:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media(max-width:700px){.wrap{padding:18px}.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.top{align-items:flex-start}}
+</style>
+</head>
+<body>
+<main class="wrap">
+<header class="top">
+<div class="brand"><div class="logo" aria-hidden="true">✳</div><div><div class="brand-name">DOCUMIND AI</div><div class="brand-sub">DOCUMENT INTELLIGENCE WORKSPACE</div></div></div>
+<div class="pill" id="status-text">READY · WAITING FOR PDF</div>
+</header>
+<div class="eyebrow">RESEARCH WORKSPACE / DOCUMENT ANALYSIS</div>
+<h1>Make every document<br><span>easier to understand.</span></h1>
+<p class="lead">Upload a PDF, preview its pages, ask questions, generate summaries and extract useful information with Gemini on Vertex AI.</p>
+<section class="metrics" aria-label="Workspace information">
+<div class="metric"><div class="metric-label">AI ENGINE</div><div class="metric-value">Gemini</div></div>
+<div class="metric"><div class="metric-label">CLOUD PLATFORM</div><div class="metric-value">Vertex AI</div></div>
+<div class="metric"><div class="metric-label">SUPPORTED FILE</div><div class="metric-value">PDF · 200 MB</div></div>
+<div class="metric"><div class="metric-label">CURRENT DOCUMENT</div><div class="metric-value" id="document-name">No document</div></div>
+</section>
+</main>
+</body>
+</html>
