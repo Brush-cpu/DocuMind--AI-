@@ -76,7 +76,7 @@ with st.sidebar:
     st.divider()
     st.caption(f"AI model: {MODEL}")
     st.caption("Google Cloud · Vertex AI")
-    st.caption("Maximum PDF size: 20 MB")
+    st.caption("Maximum PDF size: 200 MB")
 
 pdf_bytes = None
 page_text = []
