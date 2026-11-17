@@ -79,9 +79,9 @@ with st.sidebar:
     st.markdown("## ✳ DocuMind AI")
     st.caption("Document intelligence workspace")
     if firestore_available:
-    st.success("Firestore Connected")
+        st.success("Firestore Connected")
     else:
-    st.caption("Firestore: Waiting for document")
+        st.caption("Firestore: Waiting for document")
     uploaded_file = st.file_uploader("Upload a PDF", type=["pdf"], key="pdf_upload")
     st.divider()
     st.caption(f"AI model: {MODEL}")
