@@ -1107,8 +1107,7 @@ by the document. Do not invent missing details.
             else:
                 st.info("Your generated summary will appear here.")
 
-                  else:
-                      st.info("Your generated summary will appear here.")
+        
 
         # ----------------------------------
         # INFORMATION EXTRACTION
