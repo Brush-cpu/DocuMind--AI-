@@ -113,6 +113,28 @@ if uploaded_file is not None:
 if error_message:
     st.error(error_message)
 
+# =====================================
+# SAVE UPLOADED DOCUMENT TO FIRESTORE
+# =====================================
+
+document_id = None
+firestore_available = False
+
+if pdf_bytes:
+
+    try:
+        document_id = save_document(
+            pdf_bytes,
+            doc_name,
+            len(page_text)
+        )
+
+        firestore_available = True
+
+    except Exception as exc:
+        st.warning(f"Firestore error: {exc}")
+        
+
 # Top dashboard banner is authored in the separate HTML file.
 template = HTML_FILE.read_text(encoding="utf-8")
 safe_doc_name = doc_name.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
