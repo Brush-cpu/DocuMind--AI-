@@ -397,7 +397,7 @@ def markdown_to_pdf(
     )
 
     base = getSampleStyleSheet()
-        styles = {
+    styles = {
         "title": ParagraphStyle(
             "DocTitle",
             parent=base["Title"],
