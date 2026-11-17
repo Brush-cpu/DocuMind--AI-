@@ -1089,7 +1089,7 @@ by the document. Do not invent missing details.
                 except Exception as exc:
                     st.error(f"Summary generation failed: {exc}")
 
-            summary = st.session_state.get("latest_summary", "")
+                  summary = st.session_state.get("latest_summary", "")
                   if summary:
                       st.success("Summary generated successfully.")
                       with st.container(height=520, border=True):
