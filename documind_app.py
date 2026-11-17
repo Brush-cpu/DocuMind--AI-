@@ -74,14 +74,12 @@ div[data-testid="stTabs"] button{font-size:12px}
 if not HTML_FILE.is_file():
     st.error(f"Missing {HTML_FILE.name}. Keep it in the same folder as this Python file.")
     st.stop()
-
+document_id = None
+firestore_available = False
 with st.sidebar:
     st.markdown("## ✳ DocuMind AI")
     st.caption("Document intelligence workspace")
-    if firestore_available:
-        st.success("Firestore Connected")
-    else:
-        st.caption("Firestore: Waiting for document")
+    st.caption("Google Cloud · Firestore Enabled")
     uploaded_file = st.file_uploader("Upload a PDF", type=["pdf"], key="pdf_upload")
     st.divider()
     st.caption(f"AI model: {MODEL}")
