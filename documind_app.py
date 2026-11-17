@@ -1,5 +1,7 @@
 import os
 import re
+import uuid
+import hashlib
 from html import escape
 from io import BytesIO
 from pathlib import Path
@@ -71,86 +73,6 @@ div[data-testid="stTabs"] button{font-size:12px}
 </style>
 """, unsafe_allow_html=True)
 
-if not HTML_FILE.is_file():
-    st.error(f"Missing {HTML_FILE.name}. Keep it in the same folder as this Python file.")
-    st.stop()
-document_id = None
-firestore_available = False
-with st.sidebar:
-    st.markdown("## ✳ DocuMind AI")
-    st.caption("Document intelligence workspace")
-    st.caption("Google Cloud · Firestore Enabled")
-    uploaded_file = st.file_uploader("Upload a PDF", type=["pdf"], key="pdf_upload")
-    st.divider()
-    st.caption(f"AI model: {MODEL}")
-    st.caption("Google Cloud · Vertex AI")
-    st.caption("Maximum PDF size: 20 MB")
-
-pdf_bytes = None
-page_text = []
-doc_name = "No document"
-error_message = None
-if uploaded_file is not None:
-    candidate = uploaded_file.getvalue()
-    if not candidate:
-        error_message = "The selected file is empty."
-    elif len(candidate) > MAX_FILE_SIZE:
-        error_message = "The PDF exceeds the 20 MB limit."
-    elif not candidate.startswith(b"%PDF-"):
-        error_message = "This file does not appear to be a valid PDF."
-    else:
-        try:
-            reader = PdfReader(BytesIO(candidate))
-            if reader.is_encrypted:
-                error_message = "Encrypted PDFs are not supported."
-            elif len(reader.pages) == 0:
-                error_message = "The PDF contains no pages."
-            else:
-                pdf_bytes = candidate
-                page_text = [(page.extract_text() or "") for page in reader.pages]
-                doc_name = uploaded_file.name
-        except Exception as exc:
-            error_message = f"Could not read PDF: {exc}"
-
-if error_message:
-    st.error(error_message)
-
-# =====================================
-# SAVE UPLOADED DOCUMENT TO FIRESTORE
-# =====================================
-
-document_id = None
-firestore_available = False
-
-if pdf_bytes:
-
-    try:
-        document_id = save_document(
-            pdf_bytes,
-            doc_name,
-            len(page_text)
-        )
-
-        firestore_available = True
-
-    except Exception as exc:
-        st.warning(f"Firestore error: {exc}")
-        
-
-# Top dashboard banner is authored in the separate HTML file.
-template = HTML_FILE.read_text(encoding="utf-8")
-safe_doc_name = doc_name.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-status_text = "DOCUMENT LOADED" if pdf_bytes else "READY · WAITING FOR PDF"
-template = template.replace(
-    '<div class="pill" id="status-text">READY · WAITING FOR PDF</div>',
-    f'<div class="pill" id="status-text">{status_text}</div>',
-)
-template = template.replace(
-    '<div class="metric-value" id="document-name">No document</div>',
-    f'<div class="metric-value" id="document-name">{safe_doc_name}</div>',
-)
-st.components.v1.html(template, height=430, scrolling=False)
-
 #@st.cache_resource
 # def get_vertex_client(project_id: str, location: str):
 #     if not project_id:
@@ -205,12 +127,12 @@ def get_database():
     return get_firestore_client(PROJECT_ID)
 
 
+
+
 # =====================================
 # DOCUMIND AI - FIRESTORE OPERATIONS
 # =====================================
 
-import uuid
-import hashlib
 
 
 def get_session_id():
@@ -285,6 +207,138 @@ def save_ai_result(document_id, result_type, content):
             "generated_at": firestore.SERVER_TIMESTAMP
         })
     
+
+
+def load_chat(document_id):
+    """Load this document's saved conversation for the current app session."""
+    db = get_database()
+    messages_ref = (
+        db.collection("sessions")
+        .document(get_session_id())
+        .collection("documents")
+        .document(document_id)
+        .collection("chat_history")
+    )
+
+    docs = messages_ref.order_by("timestamp").stream()
+    return [
+        {
+            "role": item.to_dict().get("role", "assistant"),
+            "content": item.to_dict().get("message", "")
+        }
+        for item in docs
+    ]
+
+
+def load_ai_result(document_id, result_type):
+    """Load a saved summary or extraction, if one exists."""
+    db = get_database()
+    ref = (
+        db.collection("sessions")
+        .document(get_session_id())
+        .collection("documents")
+        .document(document_id)
+        .collection("ai_results")
+        .document(result_type)
+    )
+    snapshot = ref.get()
+    if snapshot.exists:
+        return snapshot.to_dict().get("content", "")
+    return ""
+
+
+if not HTML_FILE.is_file():
+    st.error(f"Missing {HTML_FILE.name}. Keep it in the same folder as this Python file.")
+    st.stop()
+document_id = None
+firestore_available = False
+with st.sidebar:
+    st.markdown("## ✳ DocuMind AI")
+    st.caption("Document intelligence workspace")
+    st.caption("Google Cloud · Firestore")
+    uploaded_file = st.file_uploader("Upload a PDF", type=["pdf"], key="pdf_upload")
+    st.divider()
+    st.caption(f"AI model: {MODEL}")
+    st.caption("Google Cloud · Vertex AI")
+    st.caption("Maximum PDF size: 20 MB")
+
+pdf_bytes = None
+page_text = []
+doc_name = "No document"
+error_message = None
+if uploaded_file is not None:
+    candidate = uploaded_file.getvalue()
+    if not candidate:
+        error_message = "The selected file is empty."
+    elif len(candidate) > MAX_FILE_SIZE:
+        error_message = "The PDF exceeds the 20 MB limit."
+    elif not candidate.startswith(b"%PDF-"):
+        error_message = "This file does not appear to be a valid PDF."
+    else:
+        try:
+            reader = PdfReader(BytesIO(candidate))
+            if reader.is_encrypted:
+                error_message = "Encrypted PDFs are not supported."
+            elif len(reader.pages) == 0:
+                error_message = "The PDF contains no pages."
+            else:
+                pdf_bytes = candidate
+                page_text = [(page.extract_text() or "") for page in reader.pages]
+                doc_name = uploaded_file.name
+        except Exception as exc:
+            error_message = f"Could not read PDF: {exc}"
+
+if error_message:
+    st.error(error_message)
+
+# =====================================
+# SAVE UPLOADED DOCUMENT TO FIRESTORE
+# =====================================
+
+document_id = None
+firestore_available = False
+
+if pdf_bytes:
+    document_id = get_document_id(pdf_bytes)
+
+    try:
+        save_document(pdf_bytes, doc_name, len(page_text))
+        firestore_available = True
+
+        # Load saved data only when a different PDF is selected.
+        if st.session_state.get("active_document_id") != document_id:
+            st.session_state.active_document_id = document_id
+            st.session_state.chat_messages = load_chat(document_id)
+            st.session_state["latest_summary"] = load_ai_result(
+                document_id, "summary"
+            )
+            st.session_state["latest_extraction"] = load_ai_result(
+                document_id, "extraction"
+            )
+
+    except Exception as exc:
+        st.warning(f"Firestore is not available: {exc}")
+        if st.session_state.get("active_document_id") != document_id:
+            st.session_state.active_document_id = document_id
+            st.session_state.chat_messages = []
+            st.session_state["latest_summary"] = ""
+            st.session_state["latest_extraction"] = ""
+
+
+# Top dashboard banner is authored in the separate HTML file.
+template = HTML_FILE.read_text(encoding="utf-8")
+safe_doc_name = doc_name.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+status_text = "DOCUMENT LOADED" if pdf_bytes else "READY · WAITING FOR PDF"
+template = template.replace(
+    '<div class="pill" id="status-text">READY · WAITING FOR PDF</div>',
+    f'<div class="pill" id="status-text">{status_text}</div>',
+)
+template = template.replace(
+    '<div class="metric-value" id="document-name">No document</div>',
+    f'<div class="metric-value" id="document-name">{safe_doc_name}</div>',
+)
+st.components.v1.html(template, height=430, scrolling=False)
+
 
 
 def ask_gemini(data: bytes, prompt: str) -> str:
@@ -507,101 +561,22 @@ with right:
                 question = st.text_input("Your question", placeholder="What is the main objective?")
                 send = st.form_submit_button("Send question", use_container_width=True)
             if send and question.strip():
-                st.session_state.chat_messages.append({"role": "user", "content": question})
                 try:
+                    history = "\\n".join(
+                        f'{m["role"]}: {m["content"]}'
+                        for m in st.session_state.chat_messages[-8:]
+                    )
+
                     with st.spinner("Gemini is reading the document..."):
-                        history = "\n".join(
-                            f'{m["role"]}: {m["content"]}'
-                            for m in st.session_state.chat_messages[-8:]
-                        )
                         answer = ask_gemini(pdf_bytes, f"""You are DocuMind Assistant.
 Answer using only the attached PDF.
 Conversation:
 {history}
 Question: {question}
 Be clear and accurate. Cite page numbers only if reliable. If the PDF does not contain the answer, say so. Do not invent facts.""")
-                    st.session_state.chat_messages.append({"role": "assistant", "content": answer})
-                    st.rerun()
-                except Exception as exc:
-                    st.error(f"Gemini request failed: {exc}")
-            if st.button("Clear chat", key="clear_chat"):
-                st.session_state.chat_messages = []
-                st.rerun()
 
-        with tabs[1]:
-            summary_type = st.selectbox("Summary format", ["Short summary", "Detailed summary", "Key points"])
-            if st.button("Generate summary", use_container_width=True):
-                try:
-                    with st.spinner("Generating summary..."):
-                        result = ask_gemini(pdf_bytes, f"""Create a {summary_type} of this PDF.
-Include topic, purpose, methodology, key findings and conclusion where available.
-Use only supported information and identify missing details.""")
-                    st.session_state["latest_summary"] = result
-                except Exception as exc:
-                    st.error(f"Gemini request failed: {exc}")
-            if st.session_state.get("latest_summary"):
-                st.markdown("#### Generated summary")
-                with st.container(height=480, border=True):
-                    st.markdown(st.session_state["latest_summary"])
-                summary_pdf = markdown_to_pdf(
-                    st.session_state["latest_summary"], "DocuMind Summary"
-                )
-                st.download_button(
-                    "Download summary as PDF",
-                    data=summary_pdf,
-                    file_name="DocuMind_Summary.pdf",
-                    mime="application/pdf",
-                    key="download_summary_pdf",
-                    use_container_width=True,
-                )
-
-        with tabs[2]:
-            extraction_type = st.selectbox("Information to extract", [
-                "Research objectives and methodology",
-                "Key findings and conclusions",
-                "Important dates, names and entities",
-                "Complete document insights",
-            ])
-            if st.button("Extract information", use_container_width=True):
-                try:
-                    with st.spinner("Extracting information..."):
-                        result = ask_gemini(pdf_bytes, f"""Extract {extraction_type} from this PDF.
-Organise with headings and tables where useful. Do not invent missing information.""")
-                    st.session_state["latest_extraction"] = result
-                except Exception as exc:
-                    st.error(f"Gemini request failed: {exc}")
-            if st.session_state.get("latest_extraction"):
-                st.markdown("#### Extracted information")
-                with st.container(height=480, border=True):
-                    st.markdown(st.session_state["latest_extraction"])
-                extraction_pdf = markdown_to_pdf(
-                    st.session_state["latest_extraction"], "DocuMind Extracted Information"
-                )
-                st.download_button(
-                    "Download extraction as PDF",
-                    data=extraction_pdf,
-                    file_name="DocuMind_Extraction.pdf",
-                    mime="application/pdf",
-                    key="download_extraction_pdf",
-                    use_container_width=True,
-                )
-
-        with tabs[3]:
-            query = st.text_input("Search document text", placeholder="Enter a word or phrase")
-            if query:
-                matches = [
-                    (i+1, text) for i, text in enumerate(page_text)
-                    if query.casefold() in text.casefold()
-                ]
-                if not matches:
-                    st.warning("No matches found. Scanned PDFs may require OCR.")
-                else:
-                    st.success(f"Found matches on {len(matches)} page(s).")
-                    for page_no, text in matches:
-                        pos = text.casefold().find(query.casefold())
-                        excerpt = text[max(0, pos-160):pos+len(query)+220].replace("\n", " ")
-                        with st.expander(f"Page {page_no}"):
-                            st.write(excerpt)
-
-st.markdown("---")
-st.caption(f"DocuMind AI · Vertex AI · {MODEL} · Session-based document processing")
+                    st.session_state.chat_messages.append({
+                        "role": "user",
+                        "content": question
+                    })
+                    st.session_state.chat_m
