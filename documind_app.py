@@ -181,6 +181,88 @@ def get_database():
     return get_firestore_client(PROJECT_ID)
 
 
+# =====================================
+# DOCUMIND AI - FIRESTORE OPERATIONS
+# =====================================
+
+import uuid
+import hashlib
+
+
+def get_session_id():
+
+    if "session_id" not in st.session_state:
+        st.session_state.session_id = uuid.uuid4().hex
+
+    return st.session_state.session_id
+
+
+def get_document_id(data):
+
+    return hashlib.sha256(data).hexdigest()
+
+
+def save_document(data, filename, pages):
+
+    db = get_database()
+
+    session_id = get_session_id()
+    document_id = get_document_id(data)
+
+    ref = (
+        db.collection("sessions")
+        .document(session_id)
+        .collection("documents")
+        .document(document_id)
+    )
+
+    if not ref.get().exists:
+
+        ref.set({
+            "filename": filename,
+            "document_id": document_id,
+            "page_count": pages,
+            "file_size": len(data),
+            "uploaded_at": firestore.SERVER_TIMESTAMP,
+            "status": "processed"
+        })
+
+    return document_id
+
+
+def save_chat(document_id, role, message):
+
+    db = get_database()
+
+    db.collection("sessions") \
+        .document(get_session_id()) \
+        .collection("documents") \
+        .document(document_id) \
+        .collection("chat_history") \
+        .add({
+            "role": role,
+            "message": message,
+            "timestamp": firestore.SERVER_TIMESTAMP
+        })
+
+
+def save_ai_result(document_id, result_type, content):
+
+    db = get_database()
+
+    db.collection("sessions") \
+        .document(get_session_id()) \
+        .collection("documents") \
+        .document(document_id) \
+        .collection("ai_results") \
+        .document(result_type) \
+        .set({
+            "content": content,
+            "generated_at": firestore.SERVER_TIMESTAMP
+        })
+    
+
+
 def ask_gemini(data: bytes, prompt: str) -> str:
     client = get_vertex_client(PROJECT_ID, LOCATION)
     pdf_part = types.Part.from_bytes(data=data, mime_type="application/pdf")
