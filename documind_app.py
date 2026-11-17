@@ -1,4 +1,3 @@
-
 import os
 import re
 import uuid
@@ -398,8 +397,7 @@ def markdown_to_pdf(
     )
 
     base = getSampleStyleSheet()
-
-    styles = {
+        styles = {
         "title": ParagraphStyle(
             "DocTitle",
             parent=base["Title"],
@@ -799,9 +797,7 @@ if pdf_bytes:
 
 template = HTML_FILE.read_text(encoding="utf-8")
 
-safe_doc_name = (
-    escape(doc_name)
-)
+safe_doc_name = escape(doc_name)
 
 status_text = (
     "DOCUMENT LOADED"
@@ -910,7 +906,6 @@ with left:
             f"{len(pdf_bytes)/1024:.1f} KB"
         )
 
-    
     else:
         st.markdown("""
         <div style="
@@ -937,8 +932,226 @@ with left:
             </div>
         </div>
         """, unsafe_allow_html=True)
-st.markdown("---")
+        # ==========================================
+# 19. AI DOCUMENT WORKSPACE
+# ==========================================
 
+with right:
+
+    st.markdown(
+        '<div class="panel-title">AI DOCUMENT WORKSPACE</div>',
+        unsafe_allow_html=True
+    )
+
+    if not pdf_bytes:
+        st.info("Upload a PDF to activate the AI workspace.")
+
+    else:
+        chat_tab, summary_tab, extract_tab, search_tab = st.tabs([
+            "💬 Ask AI",
+            "📝 Summary",
+            "📊 Extract",
+            "🔎 Search"
+        ])
+
+        # ----------------------------------
+        # CHAT WITH YOUR DOCUMENT
+        # ----------------------------------
+        with chat_tab:
+            st.markdown("### Ask questions about your PDF")
+            st.caption("Ask Gemini questions about the uploaded document.")
+
+            if "chat_messages" not in st.session_state:
+                st.session_state.chat_messages = []
+
+            for message in st.session_state.chat_messages:
+                with st.chat_message(message["role"]):
+                    st.markdown(message["content"])
+
+            with st.form("document_chat_form", clear_on_submit=True):
+                question = st.text_input(
+                    "Your question",
+                    placeholder="e.g. What is the main objective of this project?"
+                )
+                ask_button = st.form_submit_button(
+                    "Ask Gemini ✦",
+                    use_container_width=True
+                )
+
+            if ask_button and question.strip():
+                user_message = question.strip()
+                st.session_state.chat_messages.append({
+                    "role": "user",
+                    "content": user_message
+                })
+
+                if firestore_available:
+                    try:
+                        save_chat(document_id, "user", user_message)
+                    except Exception as exc:
+                        st.warning(f"Could not save your question to Firestore: {exc}")
+
+                prompt = f"""
+You are DocuMind AI, an intelligent document assistant.
+Answer the user's question using the uploaded PDF as your source.
+Be accurate, clear and structured. If the answer is not present in the
+PDF, say that it is not specified in the document. Do not invent facts.
+
+USER QUESTION:
+{user_message}
+"""
+                try:
+                    with st.spinner("Gemini is analysing your document..."):
+                        answer = ask_gemini(pdf_bytes, prompt)
+
+                    st.session_state.chat_messages.append({
+                        "role": "assistant",
+                        "content": answer
+                    })
+
+                    if firestore_available:
+                        try:
+                            save_chat(document_id, "assistant", answer)
+                        except Exception as exc:
+                            st.warning(f"Could not save Gemini's response to Firestore: {exc}")
+
+                    st.rerun()
+
+                except Exception as exc:
+                    st.error(f"Gemini could not answer this question: {exc}")
+
+        # ----------------------------------
+        # DOCUMENT SUMMARY
+        # ----------------------------------
+        with summary_tab:
+            st.markdown("### Generate document summary")
+            st.caption("Create a structured summary and download it as a PDF.")
+
+            if st.button("Generate Summary", key="generate_summary", use_container_width=True):
+                summary_prompt = """
+Create a detailed, well-organised summary of this PDF.
+Use the following headings where relevant:
+1. Document overview
+2. Main objectives
+3. Important concepts
+4. Key findings
+5. Important details
+6. Conclusion
+Use clear headings and bullet points. Only include information supported
+by the document. Do not invent missing details.
+"""
+                try:
+                    with st.spinner("Generating document summary..."):
+                        summary = ask_gemini(pdf_bytes, summary_prompt)
+
+                    st.session_state.latest_summary = summary
+                    if firestore_available:
+                        try:
+                            save_ai_result(document_id, "summary", summary)
+                        except Exception as exc:
+                            st.warning(f"Summary generated, but Firestore save failed: {exc}")
+                    st.rerun()
+                except Exception as exc:
+                    st.error(f"Summary generation failed: {exc}")
+
+            summary = st.session_state.get("latest_summary", "")
+            if summary:
+                st.markdown(summary)
+                st.download_button(
+                    "Download Summary as PDF",
+                    data=markdown_to_pdf(summary, "Document Summary"),
+                    file_name="documind_summary.pdf",
+                    mime="application/pdf",
+                    key="download_summary"
+                )
+            else:
+                st.info("Your generated summary will appear here.")
+
+        # ----------------------------------
+        # INFORMATION EXTRACTION
+        # ----------------------------------
+        with extract_tab:
+            st.markdown("### Extract important information")
+            st.caption("Identify key names, dates, figures and findings.")
+
+            if st.button("Extract Information", key="extract_information", use_container_width=True):
+                extraction_prompt = """
+Extract important information from this PDF. Organise the response under
+these headings where applicable:
+1. Names and organisations
+2. Dates and deadlines
+3. Important numbers and statistics
+4. Key topics and concepts
+5. Important statements
+6. Technical terms
+7. Conclusions
+Use bullet points and tables where useful. Do not invent information.
+If a category is not present, say so briefly.
+"""
+                try:
+                    with st.spinner("Extracting information from your PDF..."):
+                        extraction = ask_gemini(pdf_bytes, extraction_prompt)
+
+                    st.session_state.latest_extraction = extraction
+                    if firestore_available:
+                        try:
+                            save_ai_result(document_id, "extraction", extraction)
+                        except Exception as exc:
+                            st.warning(f"Extraction completed, but Firestore save failed: {exc}")
+                    st.rerun()
+                except Exception as exc:
+                    st.error(f"Information extraction failed: {exc}")
+
+            extraction = st.session_state.get("latest_extraction", "")
+            if extraction:
+                st.markdown(extraction)
+                st.download_button(
+                    "Download Extracted Information",
+                    data=markdown_to_pdf(extraction, "Extracted Information"),
+                    file_name="documind_extraction.pdf",
+                    mime="application/pdf",
+                    key="download_extraction"
+                )
+            else:
+                st.info("Your extracted information will appear here.")
+
+        # ----------------------------------
+        # SEARCH INSIDE THE DOCUMENT
+        # ----------------------------------
+        with search_tab:
+            st.markdown("### Search within your PDF")
+            search_query = st.text_input(
+                "Enter a keyword or phrase",
+                placeholder="Search for a topic, name or keyword...",
+                key="document_search_query"
+            )
+
+            if st.button("Search Document", key="search_document", use_container_width=True):
+                if search_query.strip():
+                    matches = []
+                    for page_index, extracted_text in enumerate(page_text):
+                        if search_query.casefold() in extracted_text.casefold():
+                            matches.append({
+                                "page": page_index + 1,
+                                "text": extracted_text
+                            })
+
+                    if matches:
+                        st.success(f"Found {len(matches)} matching page(s).")
+                        for match in matches:
+                            with st.expander(f"Page {match['page']}"):
+                                st.write(match["text"] or "No selectable text on this page.")
+                    else:
+                        st.warning("No matching text was found in this PDF.")
+                else:
+                    st.warning("Enter a keyword or phrase first.")
+
+
+# ==========================================
+# 20. FOOTER
+# ==========================================
+
+st.markdown("---")
 st.caption(
     f"DocuMind AI · Vertex AI · {MODEL} · "
     "Firestore-enabled document processing"
