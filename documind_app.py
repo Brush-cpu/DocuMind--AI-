@@ -129,7 +129,42 @@ div[data-testid="stMetric"] {
 div[data-testid="stTabs"] button {
     font-size: 12px;
 }
+div[data-testid="stTabs"] {
+    background: #0d0b13;
+    border: 1px solid #292433;
+    border-radius: 12px;
+    padding: 10px;
+}
 
+div[data-testid="stTabs"] [role="tablist"] {
+    gap: 5px;
+    border-bottom: 1px solid #332a42;
+}
+
+div[data-testid="stTabs"] button[role="tab"] {
+    background: #17131f;
+    border-radius: 7px 7px 0 0;
+    padding: 9px 12px;
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+div[data-testid="stTabs"] button[aria-selected="true"] {
+    background: #38264f;
+    border-bottom: 2px solid #b79aff;
+    color: white;
+}
+
+div[data-testid="stMarkdownContainer"] h3 {
+    color: #e8dcff;
+    margin-top: 12px;
+}
+
+div[data-testid="stExpander"] {
+    background: #111019;
+    border: 1px solid #332a42;
+    border-radius: 9px;
+}
 .doc-panel {
     background: #111019;
     border: 1px solid #292433;
@@ -827,7 +862,7 @@ st.components.v1.html(
 # ==========================================
 
 left, right = st.columns(
-    [1.35, 1],
+    [1, 1.35],
     gap="large"
 )
 
@@ -1056,14 +1091,18 @@ by the document. Do not invent missing details.
 
             summary = st.session_state.get("latest_summary", "")
             if summary:
-                st.markdown(summary)
-                st.download_button(
-                    "Download Summary as PDF",
-                    data=markdown_to_pdf(summary, "Document Summary"),
-                    file_name="documind_summary.pdf",
-                    mime="application/pdf",
-                    key="download_summary"
-                )
+    st.success("Summary generated successfully.")
+
+    with st.container(height=520, border=True):
+        st.markdown(summary)
+
+    st.download_button(
+        "Download Summary as PDF",
+        data=markdown_to_pdf(summary, "Document Summary"),
+        file_name="documind_summary.pdf",
+        mime="application/pdf",
+        key="download_summary"
+    )
             else:
                 st.info("Your generated summary will appear here.")
 
