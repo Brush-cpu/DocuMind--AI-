@@ -45,6 +45,11 @@ MODEL = st.secrets.get(
     os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
 ).strip()
 
+FIRESTORE_DATABASE_ID = st.secrets.get(
+    "FIRESTORE_DATABASE_ID",
+    "(default)"
+).strip()
+
 st.set_page_config(page_title="DocuMind AI", page_icon="✳", layout="wide")
 
 st.markdown("""
