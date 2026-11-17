@@ -3,6 +3,7 @@ import re
 from html import escape
 from io import BytesIO
 from pathlib import Path
+from google.cloud import firestore
 
 import streamlit as st
 from dotenv import load_dotenv
@@ -132,7 +133,7 @@ st.components.v1.html(template, height=430, scrolling=False)
 #         raise ValueError("Set GOOGLE_CLOUD_PROJECT in your .env file.")
 #     return genai.Client(vertexai=True, project=project_id, location=location)
 
-@
+
 @st.cache_resource
 def get_gcp_credentials():
 
