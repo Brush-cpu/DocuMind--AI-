@@ -910,8 +910,8 @@ with left:
             f"{len(pdf_bytes)/1024:.1f} KB"
         )
 
+    
     else:
-
         st.markdown("""
         <div style="
             min-height:390px;
@@ -919,4 +919,27 @@ with left:
             border-radius:10px;
             background:#0d0b13;
             display:flex;
-            align-items
+            align-items:center;
+            justify-content:center;
+            text-align:center;
+            padding:28px;
+        ">
+            <div>
+                <div style="font-size:38px;color:#b79aff">▤</div>
+                <div style="font-weight:700;font-size:13px;margin:10px 0">
+                    YOUR DOCUMENT WILL APPEAR HERE
+                </div>
+                <div style="color:#a29aad;font-size:11px;line-height:1.7">
+                    Upload a PDF from the left sidebar.
+                    <br>
+                    The selected page will render in this preview panel.
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+st.markdown("---")
+
+st.caption(
+    f"DocuMind AI · Vertex AI · {MODEL} · "
+    "Firestore-enabled document processing"
+)
