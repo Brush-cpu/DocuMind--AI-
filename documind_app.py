@@ -132,19 +132,26 @@ st.components.v1.html(template, height=430, scrolling=False)
 #         raise ValueError("Set GOOGLE_CLOUD_PROJECT in your .env file.")
 #     return genai.Client(vertexai=True, project=project_id, location=location)
 
+@
+@st.cache_resource
+def get_gcp_credentials():
+
+    if "gcp_service_account" not in st.secrets:
+        raise ValueError("Google Cloud credentials are missing.")
+
+    return service_account.Credentials.from_service_account_info(
+        dict(st.secrets["gcp_service_account"]),
+        scopes=["https://www.googleapis.com/auth/cloud-platform"]
+    )
+
+
 @st.cache_resource
 def get_vertex_client(project_id: str, location: str):
 
     if not project_id:
         raise ValueError("Google Cloud Project ID is missing.")
 
-    if "gcp_service_account" not in st.secrets:
-        raise ValueError("Google Cloud credentials are missing.")
-
-    credentials = service_account.Credentials.from_service_account_info(
-        dict(st.secrets["gcp_service_account"]),
-        scopes=["https://www.googleapis.com/auth/cloud-platform"]
-    )
+    credentials = get_gcp_credentials()
 
     return genai.Client(
         vertexai=True,
@@ -152,6 +159,26 @@ def get_vertex_client(project_id: str, location: str):
         location=location,
         credentials=credentials
     )
+
+
+@st.cache_resource
+def get_firestore_client(project_id: str):
+
+    if not project_id:
+        raise ValueError("Google Cloud Project ID is missing.")
+
+    credentials = get_gcp_credentials()
+
+    return firestore.Client(
+        project=project_id,
+        credentials=credentials,
+        database=FIRESTORE_DATABASE_ID
+    )
+
+
+def get_database():
+    return get_firestore_client(PROJECT_ID)
+
 
 def ask_gemini(data: bytes, prompt: str) -> str:
     client = get_vertex_client(PROJECT_ID, LOCATION)
